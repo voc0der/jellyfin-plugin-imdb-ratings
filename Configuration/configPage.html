@@ -56,6 +56,19 @@
 
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label>
+                                <input id="chkEnableMetadataProvider" type="checkbox" is="emby-checkbox" />
+                                <span>Apply Ratings During Library Scans</span>
+                            </label>
+                            <div class="fieldDescription checkboxFieldDescription">
+                                On by default. Newly scanned items get their IMDb rating immediately instead of waiting
+                                for the next scheduled run. The task writes a compact index (about 15 MB on disk, and the
+                                same in memory once loaded) that this reads. Turn off to save that memory; the daily task
+                                keeps working either way.
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label>
                                 <input id="chkEnableItemDebugLogging" type="checkbox" is="emby-checkbox" />
                                 <span>Enable Item Debug Logs</span>
                             </label>
@@ -149,6 +162,11 @@
                 document.getElementById('chkIncludeMovies').checked = !!getConfigValue(config, 'IncludeMovies', 'includeMovies', true);
                 document.getElementById('chkIncludeSeries').checked = !!getConfigValue(config, 'IncludeSeries', 'includeSeries', true);
                 document.getElementById('chkIncludeSeasonAverages').checked = !!getConfigValue(config, 'IncludeSeasonAverages', 'includeSeasonAverages', false);
+                document.getElementById('chkEnableMetadataProvider').checked = !!getConfigValue(
+                    config,
+                    'EnableMetadataProvider',
+                    'enableMetadataProvider',
+                    true);
                 document.getElementById('chkEnableItemDebugLogging').checked = !!getConfigValue(
                     config,
                     'EnableItemDebugLogging',
@@ -173,6 +191,11 @@
                 setConfigValue(config, 'IncludeMovies', 'includeMovies', document.getElementById('chkIncludeMovies').checked);
                 setConfigValue(config, 'IncludeSeries', 'includeSeries', document.getElementById('chkIncludeSeries').checked);
                 setConfigValue(config, 'IncludeSeasonAverages', 'includeSeasonAverages', document.getElementById('chkIncludeSeasonAverages').checked);
+                setConfigValue(
+                    config,
+                    'EnableMetadataProvider',
+                    'enableMetadataProvider',
+                    document.getElementById('chkEnableMetadataProvider').checked);
                 setConfigValue(
                     config,
                     'EnableItemDebugLogging',

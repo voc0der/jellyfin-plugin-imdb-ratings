@@ -6,165 +6,173 @@
     "description": "Downloads the IMDb ratings flat file daily and updates CommunityRating on all library items with an IMDb ID, without touching any other metadata.",
     "owner": "voc0der",
     "overview": "Scheduled task that keeps Jellyfin community ratings in sync with IMDb",
-    "imageUrl": "https://raw.githubusercontent.com/voc0der/jellyfin-imdb-rating-updater/main/icon.png",
+    "imageUrl": "https://raw.githubusercontent.com/voc0der/jellyfin-plugin-imdb-ratings/main/icon.png",
     "versions": [
       {
-        "version": "1.0.0.20",
-        "changelog": "## What's Changed\n\n- test: tighten .NET 9 and midpoint coverage (7dae738)\n- chore(deps): Bump actions/setup-dotnet from 5 to 6 (40f1eff)\n- chore(deps): Bump actions/checkout from 6 to 7 (6619bf1)\n- fix: use Episode.SeasonId, retarget tests to net9.0, add CI test step (7b78f8d)\n- Extract SeasonRatingCalculator and add tests (77fb535)\n- fix: address PR review feedback for season ratings (d38c60b)\n- feat: add season ratings calculated from episode averages (ef284ce)\n- docs: remove star history section [skip ci] (8da625a)\n- chore: add icon to repo. [skip ci] (0dd3e96)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.19...1.0.0.20\n",
+        "version": "1.0.0.21",
+        "changelog": "## What's Changed\n\n- feat: apply IMDb ratings at library-scan time (65751c9)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.20...1.0.0.21\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.20/IMDb_Ratings_1.0.0.20.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.21/IMDb_Ratings_1.0.0.21.zip",
+        "checksum": "3f8a9fe31294a36e579e95b055a187e5",
+        "timestamp": "2026-08-11T13:58:31Z"
+      },
+      {
+        "version": "1.0.0.20",
+        "changelog": "## What's Changed\n\n- test: tighten .NET 9 and midpoint coverage (7dae738)\n- chore(deps): Bump actions/setup-dotnet from 5 to 6 (40f1eff)\n- chore(deps): Bump actions/checkout from 6 to 7 (6619bf1)\n- fix: use Episode.SeasonId, retarget tests to net9.0, add CI test step (7b78f8d)\n- Extract SeasonRatingCalculator and add tests (77fb535)\n- fix: address PR review feedback for season ratings (d38c60b)\n- feat: add season ratings calculated from episode averages (ef284ce)\n- docs: remove star history section [skip ci] (8da625a)\n- chore: add icon to repo. [skip ci] (0dd3e96)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.19...1.0.0.20\n",
+        "targetAbi": "10.11.6.0",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.20/IMDb_Ratings_1.0.0.20.zip",
         "checksum": "346fbdaf773e3a2fb55df732040eac7c",
         "timestamp": "2026-08-01T17:59:50Z"
       },
       {
         "version": "1.0.0.19",
-        "changelog": "## What's Changed\n\n- chore: Bump the jellyfin-packages group with 2 updates (74cbd0b)\n- docs(readme): clarify scheduled task timing [skip ci] (95a3190)\n- docs(readme): refresh project presentation [skip ci] (2cdbebb)\n- chore(deps): bump actions/upload-artifact from 6 to 7 (162152d)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.18...1.0.0.19\n",
+        "changelog": "## What's Changed\n\n- chore: Bump the jellyfin-packages group with 2 updates (74cbd0b)\n- docs(readme): clarify scheduled task timing [skip ci] (95a3190)\n- docs(readme): refresh project presentation [skip ci] (2cdbebb)\n- chore(deps): bump actions/upload-artifact from 6 to 7 (162152d)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.18...1.0.0.19\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.19/IMDb_Ratings_1.0.0.19.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.19/IMDb_Ratings_1.0.0.19.zip",
         "checksum": "2ea2ba835e24012663469c1e3df31174",
         "timestamp": "2026-04-08T12:15:13Z"
       },
       {
         "version": "1.0.0.18",
-        "changelog": "## What's Changed\n\n- Use inline onsubmit handler for config save (bd436ea)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.17...1.0.0.18\n",
+        "changelog": "## What's Changed\n\n- Use inline onsubmit handler for config save (bd436ea)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.17...1.0.0.18\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.18/IMDb_Ratings_1.0.0.18.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.18/IMDb_Ratings_1.0.0.18.zip",
         "checksum": "ef7c0ec61a45425e9fc19b3ea970a3af",
         "timestamp": "2026-02-27T00:22:39Z"
       },
       {
         "version": "1.0.0.17",
-        "changelog": "## What's Changed\n\n- Use button click handler instead of form submit for config save (442f5f7)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.16...1.0.0.17\n",
+        "changelog": "## What's Changed\n\n- Use button click handler instead of form submit for config save (442f5f7)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.16...1.0.0.17\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.17/IMDb_Ratings_1.0.0.17.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.17/IMDb_Ratings_1.0.0.17.zip",
         "checksum": "61ef3f37f9b045a79d80144d5cfe94d5",
         "timestamp": "2026-02-27T00:11:07Z"
       },
       {
         "version": "1.0.0.16",
-        "changelog": "## What's Changed\n\n- Simplify config page to form submit and refactor parser LINQ (3ff245d)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.15...1.0.0.16\n",
+        "changelog": "## What's Changed\n\n- Simplify config page to form submit and refactor parser LINQ (3ff245d)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.15...1.0.0.16\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.16/IMDb_Ratings_1.0.0.16.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.16/IMDb_Ratings_1.0.0.16.zip",
         "checksum": "19b8351db34d0ebe6f2ccd32c2361029",
         "timestamp": "2026-02-26T23:38:27Z"
       },
       {
         "version": "1.0.0.15",
-        "changelog": "## What's Changed\n\n- Scope config page queries to page element and use event delegation (9b065bf)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.14...1.0.0.15\n",
+        "changelog": "## What's Changed\n\n- Scope config page queries to page element and use event delegation (9b065bf)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.14...1.0.0.15\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.15/IMDb_Ratings_1.0.0.15.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.15/IMDb_Ratings_1.0.0.15.zip",
         "checksum": "de1fbe9cbec3d02039a574b64bfc11da",
         "timestamp": "2026-02-26T23:17:58Z"
       },
       {
         "version": "1.0.0.14",
-        "changelog": "## What's Changed\n\n- Fix config save to write matching key casing from API response (887daae)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.13...1.0.0.14\n",
+        "changelog": "## What's Changed\n\n- Fix config save to write matching key casing from API response (887daae)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.13...1.0.0.14\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.14/IMDb_Ratings_1.0.0.14.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.14/IMDb_Ratings_1.0.0.14.zip",
         "checksum": "b1c0e7e3684c5140433cc74bc5f9ee02",
         "timestamp": "2026-02-26T22:58:35Z"
       },
       {
         "version": "1.0.0.13",
-        "changelog": "## What's Changed\n\n- Handle PascalCase and camelCase config keys in config page (72764f4)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.12...1.0.0.13\n",
+        "changelog": "## What's Changed\n\n- Handle PascalCase and camelCase config keys in config page (72764f4)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.12...1.0.0.13\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.13/IMDb_Ratings_1.0.0.13.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.13/IMDb_Ratings_1.0.0.13.zip",
         "checksum": "6017dd23ecff4a2c92d7db92c05b75ba",
         "timestamp": "2026-02-26T22:20:24Z"
       },
       {
         "version": "1.0.0.12",
-        "changelog": "## What's Changed\n\n- Sort using directives (731bbfc)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.11...1.0.0.12\n",
+        "changelog": "## What's Changed\n\n- Sort using directives (731bbfc)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.11...1.0.0.12\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.12/IMDb_Ratings_1.0.0.12.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.12/IMDb_Ratings_1.0.0.12.zip",
         "checksum": "a3777d1063367b83bcfa227fc0e34ff3",
         "timestamp": "2026-02-26T21:55:49Z"
       },
       {
         "version": "1.0.0.11",
-        "changelog": "## What's Changed\n\n- Add parser unit tests (d6310ef)\n- Rewrite parser with byte-buffer I/O and Utf8Parser for lower allocations (c78aad6)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.10...1.0.0.11\n",
+        "changelog": "## What's Changed\n\n- Add parser unit tests (d6310ef)\n- Rewrite parser with byte-buffer I/O and Utf8Parser for lower allocations (c78aad6)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.10...1.0.0.11\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.11/IMDb_Ratings_1.0.0.11.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.11/IMDb_Ratings_1.0.0.11.zip",
         "checksum": "4a575674887d55f13506681dfbd989af",
         "timestamp": "2026-02-26T21:53:32Z"
       },
       {
         "version": "1.0.0.10",
-        "changelog": "## What's Changed\n\n- Add opt-in sampled debug logging for per-item skip reasons (0298c33)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.9...1.0.0.10\n",
+        "changelog": "## What's Changed\n\n- Add opt-in sampled debug logging for per-item skip reasons (0298c33)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.9...1.0.0.10\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.10/IMDb_Ratings_1.0.0.10.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.10/IMDb_Ratings_1.0.0.10.zip",
         "checksum": "2694991b1c0b97d73545f5874f5cf1b3",
         "timestamp": "2026-02-26T21:42:34Z"
       },
       {
         "version": "1.0.0.9",
-        "changelog": "## What's Changed\n\n- Throttle progress reporting to integer bucket boundaries (f3f7a02)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.8...1.0.0.9\n",
+        "changelog": "## What's Changed\n\n- Throttle progress reporting to integer bucket boundaries (f3f7a02)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.8...1.0.0.9\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.9/IMDb_Ratings_1.0.0.9.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.9/IMDb_Ratings_1.0.0.9.zip",
         "checksum": "731d3e4174a18c368b5545eaac76df85",
         "timestamp": "2026-02-26T21:39:51Z"
       },
       {
         "version": "1.0.0.8",
-        "changelog": "## What's Changed\n\n- Filter parsed IMDb ratings to library items for lower memory usage (b573c28)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.7...1.0.0.8\n",
+        "changelog": "## What's Changed\n\n- Filter parsed IMDb ratings to library items for lower memory usage (b573c28)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.7...1.0.0.8\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.8/IMDb_Ratings_1.0.0.8.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.8/IMDb_Ratings_1.0.0.8.zip",
         "checksum": "c9e942881ff9445c7a3046b2dc85375e",
         "timestamp": "2026-02-26T21:37:41Z"
       },
       {
         "version": "1.0.0.7",
-        "changelog": "## What's Changed\n\n- Support episode ratings and lower minimum vote threshold (15c4e31)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.6...1.0.0.7\n",
+        "changelog": "## What's Changed\n\n- Support episode ratings and lower minimum vote threshold (15c4e31)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.6...1.0.0.7\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.7/IMDb_Ratings_1.0.0.7.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.7/IMDb_Ratings_1.0.0.7.zip",
         "checksum": "0d1a9d20213ab0ecc17b9bdde74fa65b",
         "timestamp": "2026-02-26T21:27:48Z"
       },
       {
         "version": "1.0.0.6",
-        "changelog": "## What's Changed\n\n- Replace Path.Combine to avoid CodeQL path warnings (dcc9681)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.5...1.0.0.6\n",
+        "changelog": "## What's Changed\n\n- Replace Path.Combine to avoid CodeQL path warnings (dcc9681)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.5...1.0.0.6\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.6/IMDb_Ratings_1.0.0.6.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.6/IMDb_Ratings_1.0.0.6.zip",
         "checksum": "0b2e96bba0d97920f3eed6fb45eeca51",
         "timestamp": "2026-02-26T18:19:38Z"
       },
       {
         "version": "1.0.0.5",
-        "changelog": "## What's Changed\n\n- Fix CodeQL findings in IMDb downloader (fb153b9)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.4...1.0.0.5\n",
+        "changelog": "## What's Changed\n\n- Fix CodeQL findings in IMDb downloader (fb153b9)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.4...1.0.0.5\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.5/IMDb_Ratings_1.0.0.5.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.5/IMDb_Ratings_1.0.0.5.zip",
         "checksum": "f2680f22aab9efb96e323a1a23cc7872",
         "timestamp": "2026-02-26T18:16:23Z"
       },
       {
         "version": "1.0.0.4",
-        "changelog": "## What's Changed\n\n- Upgrade plugin to .NET 9 and Jellyfin 10.11.6 (9bc041e)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.3...1.0.0.4\n",
+        "changelog": "## What's Changed\n\n- Upgrade plugin to .NET 9 and Jellyfin 10.11.6 (9bc041e)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.3...1.0.0.4\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.4/IMDb_Ratings_1.0.0.4.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.4/IMDb_Ratings_1.0.0.4.zip",
         "checksum": "87263a7efec8c16deb47c6981697fad3",
         "timestamp": "2026-02-26T18:12:08Z"
       },
       {
         "version": "1.0.0.3",
-        "changelog": "## What's Changed\n\n- Fix config page save: use button click instead of form submit (d3a96f2)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.2...1.0.0.3\n",
+        "changelog": "## What's Changed\n\n- Fix config page save: use button click instead of form submit (d3a96f2)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.2...1.0.0.3\n",
         "targetAbi": "10.10.7.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.3/IMDb_Ratings_1.0.0.3.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.3/IMDb_Ratings_1.0.0.3.zip",
         "checksum": "51820ede23a9807426d21c9ac412aecd",
         "timestamp": "2026-02-26T17:54:18Z"
       },
       {
         "version": "1.0.0.2",
-        "changelog": "## What's Changed\n\n- chore(deps): bump github/codeql-action from 3 to 4 (eb16bae)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.1...1.0.0.2\n",
+        "changelog": "## What's Changed\n\n- chore(deps): bump github/codeql-action from 3 to 4 (eb16bae)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.1...1.0.0.2\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.2/IMDb_Ratings_1.0.0.2.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.2/IMDb_Ratings_1.0.0.2.zip",
         "checksum": "96bd66c62e63f32c16ce7bc8b10aa87c",
         "timestamp": "2026-02-26T15:47:31Z"
       },
       {
         "version": "1.0.0.1",
-        "changelog": "## What's Changed\n\n- Retry transient downloads and fall back to stale cache (1cd65c7)\n- Tighten batched rating updates on failure and null parents (9683ae9)\n- Improve batch update safety and input validation (98479ee)\n- Batch DB writes for rating updates, grouped by parent (0899669)\n- Harden IMDb ratings validation and retry handling (ca5a91d)\n- Initial commit: Jellyfin IMDb ratings plugin (cb06f9f)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-imdb-rating-updater/compare/1.0.0.0...1.0.0.1\n",
+        "changelog": "## What's Changed\n\n- Retry transient downloads and fall back to stale cache (1cd65c7)\n- Tighten batched rating updates on failure and null parents (9683ae9)\n- Improve batch update safety and input validation (98479ee)\n- Batch DB writes for rating updates, grouped by parent (0899669)\n- Harden IMDb ratings validation and retry handling (ca5a91d)\n- Initial commit: Jellyfin IMDb ratings plugin (cb06f9f)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.0...1.0.0.1\n",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.1/IMDb_Ratings_1.0.0.1.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.1/IMDb_Ratings_1.0.0.1.zip",
         "checksum": "2ccf540fbccf31b8835f6cdc9eae0ba4",
         "timestamp": "2026-02-26T15:46:27Z"
       },
@@ -172,7 +180,7 @@
         "version": "1.0.0.0",
         "changelog": "Initial release\n- Daily scheduled task with manual trigger\n- IMDb flat file download with 23-hour cache\n- Minimum votes threshold\n- Configurable library types (Movies, TV Series)\n- Web UI configuration page",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/voc0der/jellyfin-imdb-rating-updater/releases/download/1.0.0.0/IMDb_Ratings_1.0.0.0.zip",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.0/IMDb_Ratings_1.0.0.0.zip",
         "checksum": "PLACEHOLDER",
         "timestamp": "2026-02-26T00:00:00Z"
       }

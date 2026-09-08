@@ -47,15 +47,18 @@ public class ImdbRatingsParser
         return await ParseInternalAsync(filePath, includeIds, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<Dictionary<string, (float Rating, int Votes)>> ParseInternalAsync(
+    /// <summary>
+    /// Streams the IMDb TSV file, invoking <paramref name="onRow"/> for every row that parses cleanly.
+    /// </summary>
+    /// <remarks>
+    /// Callers own whatever they accumulate, so this is the single place TSV framing, header validation
+    /// and per-field parsing live regardless of whether the result is a dictionary or a compact index.
+    /// </remarks>
+    private async Task<ScanStats> ScanAsync(
         string filePath,
-        IReadOnlySet<string>? includeIds,
+        RowHandler onRow,
         CancellationToken cancellationToken)
     {
-        var initialCapacity = includeIds is null ? 1_200_000 : Math.Max(includeIds.Count, 16);
-        var ratings = new Dictionary<string, (float Rating, int Votes)>(initialCapacity);
-        HashSet<ulong>? includeNumericIds = includeIds is null ? null : BuildNumericIdSet(includeIds);
-
         using var stream = new FileStream(
             filePath,
             new FileStreamOptions
@@ -150,37 +153,7 @@ public class ImdbRatingsParser
                 $"IMDb ratings file has an invalid or missing header: \"{"(empty file)"}\"");
         }
 
-        if (includeIds is null)
-        {
-            _logger.LogInformation("Parsed {ValidRows} IMDb ratings from {Total} rows ({Errors} parse errors)",
-                ratings.Count, lineCount, parseErrors);
-        }
-        else
-        {
-            _logger.LogInformation(
-                "Parsed {MatchedRows} matching IMDb ratings from {ValidRows} valid rows in {Total} rows ({Errors} parse errors)",
-                ratings.Count, validRows, lineCount, parseErrors);
-        }
-
-        // Post-parse sanity checks
-        if (validRows == 0)
-        {
-            throw new InvalidDataException("IMDb ratings file contains header but no valid data rows.");
-        }
-
-        if (validRows < MinExpectedRows)
-        {
-            throw new InvalidDataException(
-                $"IMDb ratings file appears truncated: only {validRows} valid rows (expected at least {MinExpectedRows}).");
-        }
-
-        if (lineCount > 0 && (double)parseErrors / lineCount > MaxParseErrorRatio)
-        {
-            throw new InvalidDataException(
-                $"IMDb ratings file appears corrupt: {parseErrors} parse errors out of {lineCount} rows ({(double)parseErrors / lineCount:P1}).");
-        }
-
-        return ratings;
+        return new ScanStats(lineCount, validRows, parseErrors);
 
         void ProcessLine(ReadOnlySpan<byte> lineBytes)
         {
@@ -222,21 +195,130 @@ public class ImdbRatingsParser
             }
 
             validRows++;
-
-            if (includeIds is null)
-            {
-                ratings[Encoding.ASCII.GetString(tconstBytes)] = (rating, votes);
-                return;
-            }
-
-            if (includeNumericIds is not null
-                && TryParseImdbIdNumber(tconstBytes, out var imdbIdNumber)
-                && includeNumericIds.Contains(imdbIdNumber))
-            {
-                ratings[Encoding.ASCII.GetString(tconstBytes)] = (rating, votes);
-            }
+            onRow(tconstBytes, rating, votes);
         }
     }
+
+    private async Task<Dictionary<string, (float Rating, int Votes)>> ParseInternalAsync(
+        string filePath,
+        IReadOnlySet<string>? includeIds,
+        CancellationToken cancellationToken)
+    {
+        var initialCapacity = includeIds is null ? 1_200_000 : Math.Max(includeIds.Count, 16);
+        var ratings = new Dictionary<string, (float Rating, int Votes)>(initialCapacity);
+        HashSet<ulong>? includeNumericIds = includeIds is null ? null : BuildNumericIdSet(includeIds);
+
+        var stats = await ScanAsync(
+            filePath,
+            (tconstBytes, rating, votes) =>
+            {
+                if (includeNumericIds is null)
+                {
+                    ratings[Encoding.ASCII.GetString(tconstBytes)] = (rating, votes);
+                    return;
+                }
+
+                if (TryParseImdbIdNumber(tconstBytes, out var imdbIdNumber)
+                    && includeNumericIds.Contains(imdbIdNumber))
+                {
+                    ratings[Encoding.ASCII.GetString(tconstBytes)] = (rating, votes);
+                }
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (includeIds is null)
+        {
+            _logger.LogInformation("Parsed {ValidRows} IMDb ratings from {Total} rows ({Errors} parse errors)",
+                ratings.Count, stats.LineCount, stats.ParseErrors);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Parsed {MatchedRows} matching IMDb ratings from {ValidRows} valid rows in {Total} rows ({Errors} parse errors)",
+                ratings.Count, stats.ValidRows, stats.LineCount, stats.ParseErrors);
+        }
+
+        ValidateScan(stats);
+
+        return ratings;
+    }
+
+    /// <summary>
+    /// Parses the IMDb TSV file directly into a compact, sorted <see cref="ImdbRatingsIndex"/>.
+    /// </summary>
+    /// <remarks>
+    /// This never materialises the string-keyed dictionary, so peak memory stays proportional to the index
+    /// itself rather than to 1.7 million interned tconst strings.
+    /// </remarks>
+    public async Task<ImdbRatingsIndex> BuildIndexAsync(string filePath, CancellationToken cancellationToken)
+    {
+        const int InitialCapacity = 1_800_000;
+
+        var ids = new List<uint>(InitialCapacity);
+        var ratings = new List<byte>(InitialCapacity);
+        var votes = new List<uint>(InitialCapacity);
+        int skippedUnrepresentable = 0;
+
+        var stats = await ScanAsync(
+            filePath,
+            (tconstBytes, rating, voteCount) =>
+            {
+                if (!TryParseImdbIdNumber(tconstBytes, out var imdbIdNumber)
+                    || imdbIdNumber > uint.MaxValue
+                    || voteCount < 0)
+                {
+                    skippedUnrepresentable++;
+                    return;
+                }
+
+                ids.Add((uint)imdbIdNumber);
+                ratings.Add(ImdbRatingsIndex.EncodeRating(rating));
+                votes.Add((uint)voteCount);
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Indexed {IndexedRows} IMDb ratings from {Total} rows ({Errors} parse errors, {Skipped} unrepresentable IDs)",
+            ids.Count, stats.LineCount, stats.ParseErrors, skippedUnrepresentable);
+
+        ValidateScan(stats);
+
+        // ValidateScan only sees rows that framed and parsed correctly, which says nothing about whether their
+        // tconst values were usable. Without this a well-formed file full of unusable IDs would yield a valid
+        // but near-empty index and overwrite a good one.
+        if (ids.Count < MinExpectedRows)
+        {
+            throw new InvalidDataException(
+                $"IMDb ratings file yielded only {ids.Count} indexable rows (expected at least {MinExpectedRows}); "
+                + $"{skippedUnrepresentable} of {stats.ValidRows} valid rows had unusable IMDb IDs.");
+        }
+
+        return ImdbRatingsIndex.CreateSorted(ids.ToArray(), ratings.ToArray(), votes.ToArray());
+    }
+
+    private static void ValidateScan(ScanStats stats)
+    {
+        if (stats.ValidRows == 0)
+        {
+            throw new InvalidDataException("IMDb ratings file contains header but no valid data rows.");
+        }
+
+        if (stats.ValidRows < MinExpectedRows)
+        {
+            throw new InvalidDataException(
+                $"IMDb ratings file appears truncated: only {stats.ValidRows} valid rows (expected at least {MinExpectedRows}).");
+        }
+
+        if (stats.LineCount > 0 && (double)stats.ParseErrors / stats.LineCount > MaxParseErrorRatio)
+        {
+            throw new InvalidDataException(
+                $"IMDb ratings file appears corrupt: {stats.ParseErrors} parse errors out of {stats.LineCount} rows ({(double)stats.ParseErrors / stats.LineCount:P1}).");
+        }
+    }
+
+    private delegate void RowHandler(ReadOnlySpan<byte> tconstBytes, float rating, int votes);
+
+    private readonly record struct ScanStats(int LineCount, int ValidRows, int ParseErrors);
 
     private static string DecodeHeaderForError(ReadOnlySpan<byte> headerBytes)
     {
@@ -278,7 +360,13 @@ public class ImdbRatingsParser
                 return false;
             }
 
-            numericId = (numericId * 10) + (ulong)(c - '0');
+            ulong digit = (ulong)(c - '0');
+            if (numericId > (ulong.MaxValue - digit) / 10)
+            {
+                return false;
+            }
+
+            numericId = (numericId * 10) + digit;
         }
 
         return true;
@@ -301,7 +389,13 @@ public class ImdbRatingsParser
                 return false;
             }
 
-            numericId = (numericId * 10) + (ulong)(c - (byte)'0');
+            ulong digit = (ulong)(c - (byte)'0');
+            if (numericId > (ulong.MaxValue - digit) / 10)
+            {
+                return false;
+            }
+
+            numericId = (numericId * 10) + digit;
         }
 
         return true;

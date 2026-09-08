@@ -19,5 +19,11 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public bool IncludeSeasonAverages { get; set; } = false;
 
+    /// <summary>
+    /// Gets or sets a value indicating whether ratings are also supplied at library-scan time.
+    /// When enabled the scheduled task writes a compact index (~15 MB) that the metadata provider reads.
+    /// </summary>
+    public bool EnableMetadataProvider { get; set; } = true;
+
     public bool EnableItemDebugLogging { get; set; } = false;
 }

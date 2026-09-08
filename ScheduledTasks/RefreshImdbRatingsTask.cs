@@ -65,12 +65,28 @@ public class RefreshImdbRatingsTask : IScheduledTask
         _logger.LogInformation("Starting IMDb ratings refresh (minVotes={MinVotes}, movies={Movies}, series={Series}, seasonAverages={SeasonAverages})",
             config.MinimumVotes, config.IncludeMovies, config.IncludeSeries, config.IncludeSeasonAverages);
 
+        // Reclaim the provider's disk and memory before any network, parsing, or library work can fail. The
+        // scheduled rating refresh remains enabled independently and continues below.
+        if (!IsMetadataProviderCurrentlyEnabled(config))
+        {
+            DisableProviderIndex();
+        }
+
+        var downloader = new ImdbFlatFileDownloader(
+            _httpClientFactory,
+            _loggerFactory.CreateLogger<ImdbFlatFileDownloader>(),
+            _dataPath);
+        var parser = new ImdbRatingsParser(_loggerFactory.CreateLogger<ImdbRatingsParser>());
+
         // Step 1: Query library items and build a distinct IMDb ID filter set.
         progress.Report(0);
         var items = GetLibraryItems(config);
         if (items.Count == 0)
         {
             _logger.LogInformation("Found 0 library items with IMDb IDs");
+
+            // An empty library still needs an index built, so the provider can rate the very first scan.
+            await TryWriteProviderIndexAsync(downloader, parser, config, cancellationToken).ConfigureAwait(false);
             progress.Report(100);
             return;
         }
@@ -93,6 +109,8 @@ public class RefreshImdbRatingsTask : IScheduledTask
         if (libraryImdbIds.Count == 0)
         {
             _logger.LogWarning("No valid IMDb IDs found on selected library items — nothing to update");
+
+            await TryWriteProviderIndexAsync(downloader, parser, config, cancellationToken).ConfigureAwait(false);
             progress.Report(100);
             return;
         }
@@ -100,12 +118,6 @@ public class RefreshImdbRatingsTask : IScheduledTask
         progress.Report(5);
 
         // Step 2: Download/cache the ratings file, Step 3: Parse ratings (filtered to library IMDb IDs)
-        var downloader = new ImdbFlatFileDownloader(
-            _httpClientFactory,
-            _loggerFactory.CreateLogger<ImdbFlatFileDownloader>(),
-            _dataPath);
-        var parser = new ImdbRatingsParser(_loggerFactory.CreateLogger<ImdbRatingsParser>());
-
         var ratings = await DownloadAndParseWithRetryAsync(
             downloader,
             parser,
@@ -116,7 +128,7 @@ public class RefreshImdbRatingsTask : IScheduledTask
         int lastScanProgressBucket = 30;
 
         // Step 4: Identify items that need rating updates (without mutating in-memory state)
-        var pendingUpdates = new List<(BaseItem Item, BaseItem? Parent, float? OldRating, float NewRating)>();
+        var pendingUpdates = new List<PendingRatingUpdate>();
         int skippedMissingImdbId = 0;
         int skippedBelowMinimumVotes = 0;
         int skippedUnchanged = 0;
@@ -158,13 +170,13 @@ public class RefreshImdbRatingsTask : IScheduledTask
             else
             {
                 var newRating = ratingData.Rating;
-                if (item.CommunityRating.HasValue && Math.Abs(item.CommunityRating.Value - newRating) < 0.01f)
+                if (RatingComparison.IsUnchanged(item.CommunityRating, newRating))
                 {
                     skippedUnchanged++;
                 }
                 else
                 {
-                    pendingUpdates.Add((item, item.GetParent(), item.CommunityRating, newRating));
+                    pendingUpdates.Add(new PendingRatingUpdate(item, item.GetParent(), item.CommunityRating, newRating));
                 }
             }
 
@@ -231,13 +243,13 @@ public class RefreshImdbRatingsTask : IScheduledTask
                     continue;
                 }
 
-                if (season.CommunityRating.HasValue && Math.Abs(season.CommunityRating.Value - avgRating) < 0.01f)
+                if (RatingComparison.IsUnchanged(season.CommunityRating, avgRating))
                 {
                     seasonSkippedUnchanged++;
                     continue;
                 }
 
-                pendingUpdates.Add((season, season.GetParent(), season.CommunityRating, avgRating));
+                pendingUpdates.Add(new PendingRatingUpdate(season, season.GetParent(), season.CommunityRating, avgRating));
                 seasonUpdated++;
             }
 
@@ -255,78 +267,15 @@ public class RefreshImdbRatingsTask : IScheduledTask
         {
             _logger.LogInformation("Batch saving {Count} updated ratings to database", pendingUpdates.Count);
 
-            const int batchSize = 500;
-            var byParent = pendingUpdates.GroupBy(p => p.Parent?.Id ?? Guid.Empty);
-            int saved = 0;
-            int lastSaveProgressBucket = 90;
-
-            foreach (var group in byParent)
-            {
-                var parent = group.First().Parent;
-
-                foreach (var chunk in group.Chunk(batchSize))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (parent is null)
-                    {
-                        // Preserve prior semantics for root/null-parent items.
-                        for (int j = 0; j < chunk.Length; j++)
-                        {
-                            chunk[j].Item.CommunityRating = chunk[j].NewRating;
-                            try
-                            {
-                                await _libraryManager.UpdateItemAsync(
-                                    chunk[j].Item,
-                                    chunk[j].Parent!, // Preserve prior behavior for root items with no parent.
-                                    ItemUpdateType.MetadataEdit,
-                                    cancellationToken).ConfigureAwait(false);
-                            }
-                            catch
-                            {
-                                chunk[j].Item.CommunityRating = chunk[j].OldRating;
-                                throw;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // Apply ratings immediately before persisting this chunk.
-                        var chunkItems = new BaseItem[chunk.Length];
-                        for (int j = 0; j < chunk.Length; j++)
-                        {
-                            chunk[j].Item.CommunityRating = chunk[j].NewRating;
-                            chunkItems[j] = chunk[j].Item;
-                        }
-
-                        try
-                        {
-                            await _libraryManager.UpdateItemsAsync(chunkItems, parent, ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
-                        }
-                        catch
-                        {
-                            // Revert this chunk's in-memory mutations if the batch save fails/cancels.
-                            for (int j = 0; j < chunk.Length; j++)
-                            {
-                                chunk[j].Item.CommunityRating = chunk[j].OldRating;
-                            }
-
-                            throw;
-                        }
-                    }
-
-                    saved += chunk.Length;
-
-                    double saveProgress = 90 + (10.0 * saved / pendingUpdates.Count);
-                    int saveProgressBucket = (int)saveProgress;
-                    if (saveProgressBucket > lastSaveProgressBucket)
-                    {
-                        lastSaveProgressBucket = saveProgressBucket;
-                        progress.Report(saveProgress);
-                    }
-                }
-            }
+            await ApplyPendingUpdatesAsync(
+                pendingUpdates,
+                new LibraryManagerUpdateSink(_libraryManager),
+                progress,
+                cancellationToken).ConfigureAwait(false);
         }
+
+        // Step 6: Refresh the compact index the scan-time metadata provider reads.
+        await TryWriteProviderIndexAsync(downloader, parser, config, cancellationToken).ConfigureAwait(false);
 
         progress.Report(100);
         var skippedTotal = skippedMissingImdbId + skippedBelowMinimumVotes + skippedUnchanged;
@@ -339,6 +288,186 @@ public class RefreshImdbRatingsTask : IScheduledTask
             skippedBelowMinimumVotes,
             skippedMissingImdbId,
             notFound);
+    }
+
+    /// <summary>
+    /// Applies each pending rating and persists it, grouped by parent and chunked.
+    /// </summary>
+    /// <remarks>
+    /// Ratings are written to the in-memory items only immediately before the chunk containing them is saved,
+    /// and reverted if that save throws. Jellyfin hands out live <see cref="BaseItem"/> instances, so a chunk
+    /// that failed to persist must not leave the running server displaying a rating no database row holds.
+    /// </remarks>
+    internal static async Task ApplyPendingUpdatesAsync(
+        IReadOnlyList<PendingRatingUpdate> pendingUpdates,
+        IItemUpdateSink sink,
+        IProgress<double> progress,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(pendingUpdates);
+        ArgumentNullException.ThrowIfNull(sink);
+        ArgumentNullException.ThrowIfNull(progress);
+
+        const int batchSize = 500;
+        var byParent = pendingUpdates.GroupBy(p => p.Parent?.Id ?? Guid.Empty);
+        int saved = 0;
+        int lastSaveProgressBucket = 90;
+
+        foreach (var group in byParent)
+        {
+            var parent = group.First().Parent;
+
+            foreach (var chunk in group.Chunk(batchSize))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (parent is null)
+                {
+                    // Preserve prior semantics for root/null-parent items.
+                    for (int j = 0; j < chunk.Length; j++)
+                    {
+                        chunk[j].Item.CommunityRating = chunk[j].NewRating;
+                        try
+                        {
+                            await sink.UpdateItemAsync(
+                                chunk[j].Item,
+                                chunk[j].Parent, // Preserve prior behavior for root items with no parent.
+                                ItemUpdateType.MetadataEdit,
+                                cancellationToken).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            chunk[j].Item.CommunityRating = chunk[j].OldRating;
+                            throw;
+                        }
+                    }
+                }
+                else
+                {
+                    // Apply ratings immediately before persisting this chunk.
+                    var chunkItems = new BaseItem[chunk.Length];
+                    for (int j = 0; j < chunk.Length; j++)
+                    {
+                        chunk[j].Item.CommunityRating = chunk[j].NewRating;
+                        chunkItems[j] = chunk[j].Item;
+                    }
+
+                    try
+                    {
+                        await sink.UpdateItemsAsync(chunkItems, parent, ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Revert this chunk's in-memory mutations if the batch save fails/cancels.
+                        for (int j = 0; j < chunk.Length; j++)
+                        {
+                            chunk[j].Item.CommunityRating = chunk[j].OldRating;
+                        }
+
+                        throw;
+                    }
+                }
+
+                saved += chunk.Length;
+
+                double saveProgress = 90 + (10.0 * saved / pendingUpdates.Count);
+                int saveProgressBucket = (int)saveProgress;
+                if (saveProgressBucket > lastSaveProgressBucket)
+                {
+                    lastSaveProgressBucket = saveProgressBucket;
+                    progress.Report(saveProgress);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Builds the <see cref="BaseItemKind"/> filter for the library query, empty when nothing is selected.
+    /// </summary>
+    internal static BaseItemKind[] BuildIncludeItemTypes(PluginConfiguration config)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+
+        var includeTypes = new List<BaseItemKind>();
+        if (config.IncludeMovies)
+        {
+            includeTypes.Add(BaseItemKind.Movie);
+        }
+
+        if (config.IncludeSeries)
+        {
+            includeTypes.Add(BaseItemKind.Series);
+            includeTypes.Add(BaseItemKind.Episode);
+        }
+
+        return includeTypes.ToArray();
+    }
+
+    /// <summary>
+    /// Rebuilds the compact index used by <see cref="Providers.ImdbRatingsItemProvider"/>.
+    /// </summary>
+    /// <remarks>
+    /// The index is an enhancement rather than part of the refresh contract, so any failure here is logged
+    /// and swallowed: the ratings written above are already committed and must not be reported as failed.
+    /// The stale index stays in place until the next successful run.
+    /// </remarks>
+    private async Task TryWriteProviderIndexAsync(
+        ImdbFlatFileDownloader downloader,
+        ImdbRatingsParser parser,
+        PluginConfiguration config,
+        CancellationToken cancellationToken)
+    {
+        var indexPath = ImdbRatingsIndex.GetIndexPath(_dataPath);
+
+        if (!IsMetadataProviderCurrentlyEnabled(config))
+        {
+            // The setting may have changed while the scheduled refresh was running.
+            DisableProviderIndex();
+            return;
+        }
+
+        try
+        {
+            // The task is the sole writer of the index and may download to build it; the provider never does.
+            var ratingsFilePath = await GetRatingsFilePathWithTransientRetryAsync(downloader, cancellationToken)
+                .ConfigureAwait(false);
+
+            var index = await parser.BuildIndexAsync(ratingsFilePath, cancellationToken).ConfigureAwait(false);
+
+            // Building can take long enough for the setting to change. Avoid publishing work that was disabled
+            // while the task was running.
+            if (!IsMetadataProviderCurrentlyEnabled(config))
+            {
+                DisableProviderIndex();
+                return;
+            }
+
+            await index.WriteAsync(indexPath, cancellationToken).ConfigureAwait(false);
+
+            // If disable raced the asynchronous write, the configuration callback deleted the old destination
+            // before File.Move published this one. Delete the newly published file as the later operation.
+            if (!IsMetadataProviderCurrentlyEnabled(config))
+            {
+                DisableProviderIndex();
+                return;
+            }
+
+            ImdbRatingsIndexCache.InvalidateShared();
+
+            _logger.LogInformation(
+                "Wrote IMDb ratings index: {Count} titles, {SizeMb:F1} MB at {Path}",
+                index.Count,
+                index.ApproximateSizeInBytes / (1024d * 1024d),
+                indexPath);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to build IMDb ratings index; scan-time ratings will use the previous index if present");
+        }
     }
 
     private async Task<Dictionary<string, (float Rating, int Votes)>> DownloadAndParseWithRetryAsync(
@@ -379,7 +508,10 @@ public class RefreshImdbRatingsTask : IScheduledTask
     {
         try
         {
-            var filePath = await downloader.GetRatingsFilePathAsync(cancellationToken).ConfigureAwait(false);
+            // Cache invalidation above forces a fresh download. Use the same timeout-aware retry path as the
+            // initial attempt so an exhausted HttpClient timeout is reported as failure, not cancellation.
+            var filePath = await GetRatingsFilePathWithTransientRetryAsync(downloader, cancellationToken)
+                .ConfigureAwait(false);
             progress.Report(10);
             return await parser.ParseFilteredAsync(filePath, includeImdbIds, cancellationToken).ConfigureAwait(false);
         }
@@ -398,7 +530,7 @@ public class RefreshImdbRatingsTask : IScheduledTask
         {
             return await downloader.GetRatingsFilePathAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (IsTransientNetworkError(ex))
+        catch (Exception ex) when (IsTransientNetworkError(ex, cancellationToken))
         {
             // Transient download error — try once more after a short delay, or fall back to stale cache.
             _logger.LogWarning(ex, "Transient network error downloading IMDb ratings; retrying once after delay");
@@ -409,11 +541,21 @@ public class RefreshImdbRatingsTask : IScheduledTask
             {
                 return await downloader.GetRatingsFilePathAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception retryEx) when (IsTransientNetworkError(retryEx))
+            catch (Exception retryEx) when (IsTransientNetworkError(retryEx, cancellationToken))
             {
                 if (!downloader.HasCacheFile)
                 {
                     _logger.LogError(retryEx, "Download failed after retry and no cached ratings file exists");
+
+                    // HttpClient represents its own timeout as TaskCanceledException. Jellyfin treats every
+                    // OperationCanceledException as a user-cancelled scheduled task, so translate an exhausted
+                    // timeout when the scheduler token itself remains active.
+                    if (retryEx is OperationCanceledException timeoutException
+                        && !cancellationToken.IsCancellationRequested)
+                    {
+                        throw CreateExhaustedTimeoutException(timeoutException);
+                    }
+
                     throw;
                 }
 
@@ -425,10 +567,51 @@ public class RefreshImdbRatingsTask : IScheduledTask
         }
     }
 
-    private static bool IsTransientNetworkError(Exception ex)
+    internal static bool IsTransientNetworkError(Exception ex, CancellationToken cancellationToken)
     {
         return ex is HttpRequestException
-            || (ex is IOException && ex is not InvalidDataException);
+            || (ex is IOException && ex is not InvalidDataException)
+            || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested);
+    }
+
+    internal static bool ResolveMetadataProviderEnabled(
+        PluginConfiguration taskConfiguration,
+        PluginConfiguration? currentConfiguration)
+    {
+        ArgumentNullException.ThrowIfNull(taskConfiguration);
+        return (currentConfiguration ?? taskConfiguration).EnableMetadataProvider;
+    }
+
+    internal static HttpRequestException CreateExhaustedTimeoutException(OperationCanceledException exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        return new HttpRequestException("IMDb ratings download timed out after retry.", exception);
+    }
+
+    private static bool IsMetadataProviderCurrentlyEnabled(PluginConfiguration taskConfiguration)
+    {
+        return ResolveMetadataProviderEnabled(taskConfiguration, Plugin.Instance?.Configuration);
+    }
+
+    private void DisableProviderIndex()
+    {
+        var indexPath = ImdbRatingsIndex.GetIndexPath(_dataPath);
+
+        try
+        {
+            if (File.Exists(indexPath))
+            {
+                File.Delete(indexPath);
+                _logger.LogInformation("Scan-time provider disabled; removed IMDb ratings index at {Path}", indexPath);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Failed to remove IMDb ratings index at {Path}", indexPath);
+        }
+
+        // Drop the loaded copy even if disk cleanup failed; a disabled provider must not retain its memory.
+        ImdbRatingsIndexCache.InvalidateShared();
     }
 
     private IReadOnlyList<BaseItem> GetLibraryItems(PluginConfiguration config)
@@ -440,26 +623,47 @@ public class RefreshImdbRatingsTask : IScheduledTask
             Recursive = true
         };
 
-        var includeTypes = new List<BaseItemKind>();
-        if (config.IncludeMovies)
-        {
-            includeTypes.Add(BaseItemKind.Movie);
-        }
-
-        if (config.IncludeSeries)
-        {
-            includeTypes.Add(BaseItemKind.Series);
-            includeTypes.Add(BaseItemKind.Episode);
-        }
-
-        if (includeTypes.Count == 0)
+        var includeTypes = BuildIncludeItemTypes(config);
+        if (includeTypes.Length == 0)
         {
             _logger.LogWarning("No library types selected — nothing to update");
             return Array.Empty<BaseItem>();
         }
 
-        query.IncludeItemTypes = includeTypes.ToArray();
+        query.IncludeItemTypes = includeTypes;
 
         return _libraryManager.GetItemList(query);
+    }
+
+    /// <summary>
+    /// The subset of <see cref="ILibraryManager"/> the batch-save loop needs, so the loop is testable
+    /// without standing up the full 100-method interface.
+    /// </summary>
+    internal interface IItemUpdateSink
+    {
+        Task UpdateItemAsync(BaseItem item, BaseItem? parent, ItemUpdateType updateReason, CancellationToken cancellationToken);
+
+        Task UpdateItemsAsync(IReadOnlyList<BaseItem> items, BaseItem parent, ItemUpdateType updateReason, CancellationToken cancellationToken);
+    }
+
+    /// <summary>
+    /// A single rating change, captured before anything is mutated so a failed save can be undone.
+    /// </summary>
+    internal readonly record struct PendingRatingUpdate(BaseItem Item, BaseItem? Parent, float? OldRating, float NewRating);
+
+    private sealed class LibraryManagerUpdateSink : IItemUpdateSink
+    {
+        private readonly ILibraryManager _libraryManager;
+
+        public LibraryManagerUpdateSink(ILibraryManager libraryManager)
+        {
+            _libraryManager = libraryManager;
+        }
+
+        public Task UpdateItemAsync(BaseItem item, BaseItem? parent, ItemUpdateType updateReason, CancellationToken cancellationToken)
+            => _libraryManager.UpdateItemAsync(item, parent!, updateReason, cancellationToken);
+
+        public Task UpdateItemsAsync(IReadOnlyList<BaseItem> items, BaseItem parent, ItemUpdateType updateReason, CancellationToken cancellationToken)
+            => _libraryManager.UpdateItemsAsync(items, parent, updateReason, cancellationToken);
     }
 }

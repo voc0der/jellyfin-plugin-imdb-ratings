@@ -32,3 +32,18 @@ updates:
       jellyfin-packages:
         patterns:
           - "Jellyfin.*"
+
+  # Test project is not reachable from the root csproj (tests reference it, not
+  # the other way around) and there is no solution file, so it needs its own entry
+  - package-ecosystem: "nuget"
+    directory: "/tests/Jellyfin.Plugin.ImdbRatings.Tests"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "nuget"
+    commit-message:
+      prefix: "chore"
+      include: "scope"

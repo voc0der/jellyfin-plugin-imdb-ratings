@@ -151,8 +151,12 @@ jobs:
         git config user.name "voc0der"
         git config user.email "contact@netspace.in"
         git add manifest.json
-        git commit -m "Update manifest.json for version ${{ steps.version.outputs.version }}" || echo "No changes to commit"
-        git push || echo "No changes to push"
+        if git diff --cached --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Update manifest.json for version ${{ steps.version.outputs.version }} [skip ci]"
+        fi
+        git push
 
     - name: Create Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -166,3 +170,13 @@ jobs:
           --title "Release $VERSION" \
           --notes-file CHANGELOG.md \
           "${ZIP_NAME}"
+
+    - name: Rebuild centralized plugin repository
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      env:
+        GH_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
+      run: |
+        gh api \
+          --method POST \
+          repos/voc0der/jellyfin-plugins/dispatches \
+          -f event_type='plugin-updated'
