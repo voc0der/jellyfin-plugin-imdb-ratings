@@ -57,13 +57,9 @@ jobs:
         BUILD=${VERSION_PARTS[2]:-0}
         REVISION=${VERSION_PARTS[3]:-0}
 
-        # Start Jellyfin 12 support on plugin major version 2, then increment revisions normally.
-        if (( MAJOR < 2 )); then
-          NEW_VERSION="${TAG_PREFIX}2.0.0.0"
-        else
-          REVISION=$((REVISION + 1))
-          NEW_VERSION="${TAG_PREFIX}${MAJOR}.${MINOR}.${BUILD}.${REVISION}"
-        fi
+        # Increment revision for each commit
+        REVISION=$((REVISION + 1))
+        NEW_VERSION="${TAG_PREFIX}${MAJOR}.${MINOR}.${BUILD}.${REVISION}"
 
         echo "New version: $NEW_VERSION"
         echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
