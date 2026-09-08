@@ -39,7 +39,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
 
     - name: Restore dependencies
       run: dotnet restore
@@ -68,7 +68,7 @@ jobs:
       shell: bash
       run: |
         mkdir -p "release/${FOLDER_NAME}"
-        cp bin/Release/net9.0/Jellyfin.Plugin.ImdbRatings.dll "release/${FOLDER_NAME}/"
+        cp bin/Release/net10.0/Jellyfin.Plugin.ImdbRatings.dll "release/${FOLDER_NAME}/"
         echo "${BUILD_TAG}" > "release/${FOLDER_NAME}/BUILD_TAG.txt"
         cd release
         zip -r "../${ZIP_NAME}" "${FOLDER_NAME}"

@@ -21,7 +21,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
 
     - name: Restore dependencies
       run: dotnet restore
@@ -33,7 +33,7 @@ jobs:
       uses: actions/upload-artifact@v7
       with:
         name: Jellyfin.Plugin.ImdbRatings
-        path: bin/Release/net9.0/Jellyfin.Plugin.ImdbRatings.dll
+        path: bin/Release/net10.0/Jellyfin.Plugin.ImdbRatings.dll
 
     - name: Generate version and changelog
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -44,7 +44,14 @@ jobs:
         echo "Latest tag: $LATEST_TAG"
 
         # Extract version numbers (4-part semantic versioning)
-        IFS='.' read -ra VERSION_PARTS <<< "$LATEST_TAG"
+        TAG_PREFIX=""
+        VERSION_CORE="$LATEST_TAG"
+        if [[ "$VERSION_CORE" == v* ]]; then
+          TAG_PREFIX="v"
+          VERSION_CORE="${VERSION_CORE#v}"
+        fi
+
+        IFS='.' read -ra VERSION_PARTS <<< "$VERSION_CORE"
         MAJOR=${VERSION_PARTS[0]:-1}
         MINOR=${VERSION_PARTS[1]:-0}
         BUILD=${VERSION_PARTS[2]:-0}
@@ -52,7 +59,7 @@ jobs:
 
         # Increment revision for each commit
         REVISION=$((REVISION + 1))
-        NEW_VERSION="${MAJOR}.${MINOR}.${BUILD}.${REVISION}"
+        NEW_VERSION="${TAG_PREFIX}${MAJOR}.${MINOR}.${BUILD}.${REVISION}"
 
         echo "New version: $NEW_VERSION"
         echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
@@ -97,7 +104,7 @@ jobs:
 
         # Create versioned folder structure
         mkdir -p "release/${FOLDER_NAME}"
-        cp bin/Release/net9.0/Jellyfin.Plugin.ImdbRatings.dll "release/${FOLDER_NAME}/"
+        cp bin/Release/net10.0/Jellyfin.Plugin.ImdbRatings.dll "release/${FOLDER_NAME}/"
 
         # Create ZIP
         cd release
@@ -128,7 +135,7 @@ jobs:
            '.[0].imageUrl = $imageUrl | .[0].versions = [{
              "version": $version,
              "changelog": $changelog,
-             "targetAbi": "10.11.6.0",
+             "targetAbi": "12.0.0.0",
              "sourceUrl": $url,
              "checksum": $checksum,
              "timestamp": $timestamp

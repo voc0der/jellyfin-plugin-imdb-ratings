@@ -16,16 +16,20 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
 
     - name: Restore dependencies
       run: dotnet restore
 
     - name: Check whitespace formatting
-      run: dotnet format whitespace --verify-no-changes --verbosity minimal
+      run: |
+        dotnet format whitespace --verify-no-changes --verbosity minimal
+        dotnet format tests/Jellyfin.Plugin.ImdbRatings.Tests/Jellyfin.Plugin.ImdbRatings.Tests.csproj whitespace --verify-no-changes --verbosity minimal
 
     - name: Check C# style formatting
-      run: dotnet format style --verify-no-changes --severity warn --verbosity minimal
+      run: |
+        dotnet format style --verify-no-changes --severity warn --verbosity minimal
+        dotnet format tests/Jellyfin.Plugin.ImdbRatings.Tests/Jellyfin.Plugin.ImdbRatings.Tests.csproj style --verify-no-changes --severity warn --verbosity minimal
 
     - name: Run tests
       run: dotnet test tests/Jellyfin.Plugin.ImdbRatings.Tests/ --verbosity minimal
