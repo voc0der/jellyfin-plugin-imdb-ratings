@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/voc0der/jellyfin-plugin-imdb-ratings/main/icon.png",
     "versions": [
       {
+        "version": "1.0.0.22",
+        "changelog": "## What's Changed\n\n- chore: target Jellyfin 12.0.0 GA and keep the 1.0.0.x release line (eb6d27f)\n- chore: Bump xunit.runner.visualstudio from 2.8.2 to 4.0.0 (fdefb9c)\n- chore: Bump xunit from 2.9.0 to 2.9.3 (e015b1f)\n- docs(contributing): document branch, commit and PR naming [skip ci] (8a7321e)\n- docs: link back to the full plugin repository [skip ci] (d26968a)\n- docs: follow the repository rename to jellyfin-plugin-imdb-ratings [skip ci] (ee19d76)\n- docs: regenerate configuration page screenshot [skip ci] (16a938c)\n- docs(readme): dependencies badge 4 -> 2 outdated [skip ci] (582f961)\n- chore: Bump coverlet.collector from 6.0.4 to 10.0.1 (64fc9b3)\n- chore: Bump Microsoft.NET.Test.Sdk from 17.12.0 to 18.9.0 (f1c0ae6)\n- test: cover scan-time provider, download limit, and save rollback [skip ci] (035755e)\n- chore(deps): Bump github/codeql-action from 4.37.4 to 4.37.9 (#27) [skip ci] (eb7f8e4)\n- chore(ci): notify centralized plugin catalog [skip ci] (3191872)\n- chore: prepare IMDb Ratings for Jellyfin 12 (4c1f46f)\n- chore(deps): Bump github/codeql-action from 4 to 4.37.4 (03a158f)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.21...1.0.0.22\n",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/download/1.0.0.22/IMDb_Ratings_1.0.0.22.zip",
+        "checksum": "a1119e1de7111206a54c2d74f733b6f5",
+        "timestamp": "2026-09-08T20:39:45Z"
+      },
+      {
         "version": "1.0.0.21",
         "changelog": "## What's Changed\n\n- feat: apply IMDb ratings at library-scan time (65751c9)\n\n**Full Changelog**: https://github.com/voc0der/jellyfin-plugin-imdb-ratings/compare/1.0.0.20...1.0.0.21\n",
         "targetAbi": "10.11.6.0",
