@@ -18,7 +18,7 @@
     <img src="https://img.shields.io/github/license/voc0der/jellyfin-plugin-imdb-ratings?color=97CA00" alt="License" />
   </a>
   <a href="https://github.com/voc0der/jellyfin-plugin-imdb-ratings/network/dependencies">
-    <img src="https://img.shields.io/badge/dependencies-1%20outdated-orange" alt="Dependencies status" />
+    <img src="https://img.shields.io/badge/dependencies-0%20outdated-brightgreen" alt="Dependencies status" />
   </a>
 </p>
 
