@@ -113,7 +113,7 @@ public class RefreshImdbRatingsTaskHistoryTests
         using var temp = new TempDirectory();
         File.WriteAllText(temp.PathFor("imdb-ratings"), "A file blocks the history directory.");
         var original = new InvalidOperationException("Library unavailable.");
-        var library = ServiceProxy.Create<ILibraryManager>((_, _) => throw original);
+        var library = TestServiceProxy.Create<ILibraryManager>((_, _) => throw original);
         var task = new RefreshImdbRatingsTask(library, null!, NullLogger<RefreshImdbRatingsTask>.Instance,
             NullLoggerFactory.Instance, CreatePaths(temp));
 
@@ -148,7 +148,7 @@ public class RefreshImdbRatingsTaskHistoryTests
 
     private static RefreshImdbRatingsTask CreateTask(TempDirectory temp, ResponseHandler handler, IReadOnlyList<BaseItem> items)
     {
-        var library = ServiceProxy.Create<ILibraryManager>((method, _) => method.Name == nameof(ILibraryManager.GetItemList)
+        var library = TestServiceProxy.Create<ILibraryManager>((method, _) => method.Name == nameof(ILibraryManager.GetItemList)
             ? items
             : throw new InvalidOperationException($"Unexpected library call: {method.Name}"));
         return new RefreshImdbRatingsTask(library, new ClientFactory(handler), NullLogger<RefreshImdbRatingsTask>.Instance,
@@ -156,7 +156,7 @@ public class RefreshImdbRatingsTaskHistoryTests
     }
 
     private static IApplicationPaths CreatePaths(TempDirectory temp)
-        => ServiceProxy.Create<IApplicationPaths>((method, _) => method.Name == "get_DataPath"
+        => TestServiceProxy.Create<IApplicationPaths>((method, _) => method.Name == "get_DataPath"
             ? temp.Path
             : throw new InvalidOperationException($"Unexpected paths call: {method.Name}"));
 
@@ -174,20 +174,6 @@ public class RefreshImdbRatingsTaskHistoryTests
         }
 
         File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddHours(stale ? -24 : -1));
-    }
-
-    public class ServiceProxy : DispatchProxy
-    {
-        private Func<MethodInfo, object?[]?, object?> _invoke = null!;
-
-        public static T Create<T>(Func<MethodInfo, object?[]?, object?> invoke) where T : class
-        {
-            var proxy = Create<T, ServiceProxy>();
-            ((ServiceProxy)(object)proxy)._invoke = invoke;
-            return proxy;
-        }
-
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => _invoke(targetMethod!, args);
     }
 
     private sealed class ResponseHandler(HttpStatusCode statusCode) : HttpMessageHandler

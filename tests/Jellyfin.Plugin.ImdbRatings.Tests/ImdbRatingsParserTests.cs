@@ -18,77 +18,59 @@ public class ImdbRatingsParserTests
             "tt9999999"
         };
 
-        string path = CreateTempFilePath();
-        try
-        {
-            await WriteRatingsFileAsync(path, rowCount, useCrLf: true, omitFinalNewline: true);
+        using var temp = new TempDirectory();
+        string path = temp.PathFor("ratings.tsv");
+        await WriteRatingsFileAsync(path, rowCount, useCrLf: true, omitFinalNewline: true);
 
-            var parser = new ImdbRatingsParser(NullLogger<ImdbRatingsParser>.Instance);
-            var ratings = await parser.ParseFilteredAsync(path, includeIds, CancellationToken.None);
+        var parser = new ImdbRatingsParser(NullLogger<ImdbRatingsParser>.Instance);
+        var ratings = await parser.ParseFilteredAsync(path, includeIds, CancellationToken.None);
 
-            Assert.Equal(3, ratings.Count);
+        Assert.Equal(3, ratings.Count);
 
-            AssertRatingRow(ratings, 1);
-            AssertRatingRow(ratings, 42);
-            AssertRatingRow(ratings, rowCount);
-            Assert.False(ratings.ContainsKey("tt9999999"));
-        }
-        finally
-        {
-            TryDeleteFile(path);
-        }
+        AssertRatingRow(ratings, 1);
+        AssertRatingRow(ratings, 42);
+        AssertRatingRow(ratings, rowCount);
+        Assert.False(ratings.ContainsKey("tt9999999"));
     }
 
     [Fact]
     public async Task ParseFilteredAsync_ThrowsOnInvalidHeader()
     {
-        string path = CreateTempFilePath();
-        try
-        {
-            await File.WriteAllTextAsync(
-                path,
-                "bad_header\n" + "tt0000001\t7.1\t100\n",
-                TestContext.Current.CancellationToken);
+        using var temp = new TempDirectory();
+        string path = temp.PathFor("ratings.tsv");
+        await File.WriteAllTextAsync(
+            path,
+            "bad_header\n" + "tt0000001\t7.1\t100\n",
+            TestContext.Current.CancellationToken);
 
-            var parser = new ImdbRatingsParser(NullLogger<ImdbRatingsParser>.Instance);
+        var parser = new ImdbRatingsParser(NullLogger<ImdbRatingsParser>.Instance);
 
-            var ex = await Assert.ThrowsAsync<InvalidDataException>(() =>
-                parser.ParseFilteredAsync(path, new HashSet<string>(StringComparer.Ordinal) { "tt0000001" }, CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            parser.ParseFilteredAsync(path, new HashSet<string>(StringComparer.Ordinal) { "tt0000001" }, CancellationToken.None));
 
-            Assert.Contains("invalid or missing header", ex.Message, StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            TryDeleteFile(path);
-        }
+        Assert.Contains("invalid or missing header", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task ParseFilteredAsync_ThrowsOnTruncatedFile_EvenWhenMatchesExist()
     {
-        string path = CreateTempFilePath();
-        try
+        using var temp = new TempDirectory();
+        string path = temp.PathFor("ratings.tsv");
+        await using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+        await using (var writer = new StreamWriter(stream))
         {
-            await using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
-            await using (var writer = new StreamWriter(stream))
-            {
-                await writer.WriteLineAsync("tconst\taverageRating\tnumVotes");
-                await writer.WriteLineAsync("tt0000001\t7.5\t1234");
-                await writer.WriteAsync("tt0000002\t8.1\t5678");
-            }
-
-            var parser = new ImdbRatingsParser(NullLogger<ImdbRatingsParser>.Instance);
-            var includeIds = new HashSet<string>(StringComparer.Ordinal) { "tt0000001", "tt0000002" };
-
-            var ex = await Assert.ThrowsAsync<InvalidDataException>(() =>
-                parser.ParseFilteredAsync(path, includeIds, CancellationToken.None));
-
-            Assert.Contains("truncated", ex.Message, StringComparison.OrdinalIgnoreCase);
+            await writer.WriteLineAsync("tconst\taverageRating\tnumVotes");
+            await writer.WriteLineAsync("tt0000001\t7.5\t1234");
+            await writer.WriteAsync("tt0000002\t8.1\t5678");
         }
-        finally
-        {
-            TryDeleteFile(path);
-        }
+
+        var parser = new ImdbRatingsParser(NullLogger<ImdbRatingsParser>.Instance);
+        var includeIds = new HashSet<string>(StringComparer.Ordinal) { "tt0000001", "tt0000002" };
+
+        var ex = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            parser.ParseFilteredAsync(path, includeIds, CancellationToken.None));
+
+        Assert.Contains("truncated", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task WriteRatingsFileAsync(string path, int rowCount, bool useCrLf, bool omitFinalNewline)
@@ -141,26 +123,5 @@ public class ImdbRatingsParserTests
         Assert.True(ratings.TryGetValue(imdbId, out var row), $"Expected row for {imdbId}");
         Assert.InRange(Math.Abs(row.Rating - ExpectedRating(index)), 0f, 0.0001f);
         Assert.Equal(ExpectedVotes(index), row.Votes);
-    }
-
-    private static string CreateTempFilePath()
-    {
-        string dir = Path.Combine(Path.GetTempPath(), "imdb-ratings-parser-tests");
-        return Path.Combine(dir, $"{Guid.NewGuid():N}.tsv");
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-            // Best-effort cleanup for test temp files.
-        }
     }
 }
