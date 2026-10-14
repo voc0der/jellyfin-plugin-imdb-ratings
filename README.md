@@ -14,14 +14,14 @@
   <a href="https://github.com/voc0der/jellyfin-plugin-imdb-ratings/tree/main/tests">
     <img src="https://img.shields.io/badge/coverage-95%25-brightgreen" alt="Code coverage percentage" />
   </a>
+  <a href="https://github.com/voc0der/jellyfin-plugin-imdb-ratings/actions/workflows/codeql.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/voc0der/jellyfin-plugin-imdb-ratings/codeql.yml?branch=main&label=codeql" alt="CodeQL status" />
+  </a>
   <a href="https://github.com/voc0der/jellyfin-plugin-imdb-ratings/issues">
     <img src="https://img.shields.io/github/issues/voc0der/jellyfin-plugin-imdb-ratings?color=DAA520" alt="Open issues" />
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/github/license/voc0der/jellyfin-plugin-imdb-ratings?color=97CA00" alt="License" />
-  </a>
-  <a href="https://github.com/voc0der/jellyfin-plugin-imdb-ratings/network/dependencies">
-    <img src="https://img.shields.io/badge/dependencies-0%20outdated-brightgreen" alt="Dependencies status" />
   </a>
 </p>
 
