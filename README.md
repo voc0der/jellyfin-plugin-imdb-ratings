@@ -5,6 +5,7 @@
 # Jellyfin IMDb Ratings
 
 <p align="center">
+  <img src="https://img.shields.io/badge/since-02%2F26%2F2026-blue" alt="Since badge" />
   <a href="https://github.com/voc0der/jellyfin-plugin-imdb-ratings/releases/latest">
     <img src="https://img.shields.io/github/v/release/voc0der/jellyfin-plugin-imdb-ratings?label=stable%20release" alt="Stable release version" />
   </a>
