@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
@@ -112,6 +113,15 @@ public class RefreshImdbRatingsTask : IScheduledTask
             _httpClientFactory,
             _loggerFactory.CreateLogger<ImdbFlatFileDownloader>(),
             _dataPath);
+
+        // A run that did not finish cleanly may have cached a recent file that was then rejected, and only the ratings
+        // parse discards such a file. So the cache's age must not stop this run from downloading again; the cache stays
+        // the fallback if that download fails.
+        if (PreviousRunFailed())
+        {
+            downloader.RequireRefresh();
+        }
+
         var parser = new ImdbRatingsParser(_loggerFactory.CreateLogger<ImdbRatingsParser>());
 
         // Step 1: Query library items and build a distinct IMDb ID filter set.
@@ -613,6 +623,35 @@ public class RefreshImdbRatingsTask : IScheduledTask
 
                 return downloader.CachePath;
             }
+        }
+    }
+
+    /// <summary>
+    /// Reports whether the last recorded run ended in anything other than a clean completion.
+    /// </summary>
+    /// <remarks>
+    /// Warnings and cancellations count as well as failures: any of them may have left no usable download behind.
+    /// An unreadable history cannot rule a failure out, so it counts too.
+    /// </remarks>
+    private bool PreviousRunFailed()
+    {
+        try
+        {
+            var previous = new RefreshRunHistory(_dataPath, _logger).Read().FirstOrDefault();
+            if (previous is null || previous.Status == "Completed")
+            {
+                return false;
+            }
+
+            _logger.LogInformation(
+                "Previous IMDb ratings refresh ended with status {Status}; downloading the ratings file even if the cache is fresh",
+                previous.Status);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            _logger.LogWarning(ex, "Failed to read IMDb ratings run history; downloading the ratings file even if the cache is fresh");
+            return true;
         }
     }
 

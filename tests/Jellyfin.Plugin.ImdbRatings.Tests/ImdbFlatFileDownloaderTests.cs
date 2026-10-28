@@ -151,6 +151,43 @@ public class ImdbFlatFileDownloaderTests
     }
 
     [Fact]
+    public async Task GetRatingsFilePathAsync_RefreshRequired_DownloadsOnceDespiteFreshCache()
+    {
+        using var temp = new TempDirectory();
+        var handler = new StubHandler(GzipOf("fresh data"));
+        var downloader = new ImdbFlatFileDownloader(new StubHttpClientFactory(handler), NullLogger<ImdbFlatFileDownloader>.Instance, temp.Path);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(downloader.CachePath)!);
+        await File.WriteAllTextAsync(downloader.CachePath, "cached", TestContext.Current.CancellationToken);
+        downloader.RequireRefresh();
+
+        var path = await downloader.GetRatingsFilePathAsync(CancellationToken.None);
+        Assert.Equal("fresh data", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+
+        // The file that download wrote is trusted again for the rest of the run.
+        await downloader.GetRatingsFilePathAsync(CancellationToken.None);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task GetRatingsFilePathAsync_RefreshRequiredDownloadFails_KeepsCacheAndKeepsDownloading()
+    {
+        using var temp = new TempDirectory();
+        var handler = new StubHandler(Array.Empty<byte>(), HttpStatusCode.ServiceUnavailable);
+        var downloader = new ImdbFlatFileDownloader(new StubHttpClientFactory(handler), NullLogger<ImdbFlatFileDownloader>.Instance, temp.Path);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(downloader.CachePath)!);
+        await File.WriteAllTextAsync(downloader.CachePath, "cached", TestContext.Current.CancellationToken);
+        downloader.RequireRefresh();
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => downloader.GetRatingsFilePathAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<HttpRequestException>(() => downloader.GetRatingsFilePathAsync(CancellationToken.None));
+
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Equal("cached", await File.ReadAllTextAsync(downloader.CachePath, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task InvalidateCache_RemovesBothCacheAndStaleTempFile()
     {
         using var temp = new TempDirectory();

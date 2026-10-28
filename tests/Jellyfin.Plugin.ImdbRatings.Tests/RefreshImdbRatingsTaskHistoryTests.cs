@@ -64,6 +64,24 @@ public class RefreshImdbRatingsTaskHistoryTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_DownloadAfterFailedRunFails_FallsBackToRecentCache()
+    {
+        using var temp = new TempDirectory();
+        await WriteCacheAsync(temp, stale: false);
+        new RefreshRunHistory(temp.Path, NullLogger.Instance).Append(new RefreshRun { Status = "Failed" });
+        using var handler = new ResponseHandler(HttpStatusCode.Forbidden);
+
+        await CreateTask(temp, handler, new[] { CreateMovie() })
+            .ExecuteAsync(new Progress<double>(), CancellationToken.None);
+
+        var run = new RefreshRunHistory(temp.Path, NullLogger.Instance).Read()[0];
+        Assert.NotEqual(0, handler.Calls);
+        Assert.Equal("Warning", run.Status);
+        Assert.Equal("0 ratings updated; 1 skipped; 0 not found.", run.Summary);
+        Assert.Contains(run.Warnings, warning => warning.Contains("older cached") && warning.Contains("HTTP 403"));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_EmptyLibraryIndexDownloadFails_RecordsWarningWithoutThrowing()
     {
         using var temp = new TempDirectory();

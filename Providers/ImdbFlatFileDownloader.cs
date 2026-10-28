@@ -17,6 +17,7 @@ public class ImdbFlatFileDownloader
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ImdbFlatFileDownloader> _logger;
     private readonly string _cachePath;
+    private bool _refreshRequired;
 
     public ImdbFlatFileDownloader(
         IHttpClientFactory httpClientFactory,
@@ -37,14 +38,26 @@ public class ImdbFlatFileDownloader
 
     public async Task<string> GetRatingsFilePathAsync(CancellationToken cancellationToken)
     {
-        if (IsCacheFresh())
+        if (!_refreshRequired && IsCacheFresh())
         {
             _logger.LogInformation("IMDb ratings cache is fresh, skipping download");
             return _cachePath;
         }
 
         await DownloadAndDecompressAsync(cancellationToken).ConfigureAwait(false);
+        _refreshRequired = false;
         return _cachePath;
+    }
+
+    /// <summary>
+    /// Downloads on every request, however fresh the cache is, until one download succeeds.
+    /// </summary>
+    /// <remarks>
+    /// A failed download never touches the cache file, so it stays available as a fallback.
+    /// </remarks>
+    public void RequireRefresh()
+    {
+        _refreshRequired = true;
     }
 
     public bool InvalidateCache()
