@@ -196,6 +196,74 @@ public class RefreshImdbRatingsTaskExecutionTests(RatingsDataset dataset) : ICla
         Assert.False(File.Exists(cachePath + ".tmp"));
     }
 
+    [Theory]
+    [InlineData("Completed", 0)]
+    [InlineData("Warning", 1)]
+    [InlineData("Failed", 1)]
+    [InlineData("Cancelled", 1)]
+    public async Task ExecuteAsync_FreshCache_DownloadsAgainUnlessPreviousRunCompleted(string previousStatus, int downloads)
+    {
+        using var scope = new PluginTestScope();
+        dataset.WriteCache(scope.Temp.Path);
+        new RefreshRunHistory(scope.Temp.Path, NullLogger.Instance).Append(new RefreshRun { Status = previousStatus });
+        using var http = new RatingsHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(dataset.Compressed)
+        });
+
+        await CreateTask(scope, new RecordingLibrary([Movie("tt0000001", 8f)]), http)
+            .ExecuteAsync(new RecordingProgress(), CancellationToken.None);
+
+        // One download at most: the index build reuses the file the ratings refresh just downloaded.
+        Assert.Equal(downloads, http.Calls);
+        Assert.Equal("Completed", LatestRun(scope).Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnreadableHistory_DownloadsDespiteFreshCache()
+    {
+        using var scope = new PluginTestScope();
+        dataset.WriteCache(scope.Temp.Path);
+        var historyDirectory = Directory.CreateDirectory(scope.Temp.PathFor("imdb-ratings"));
+        await File.WriteAllTextAsync(Path.Join(historyDirectory.FullName, "run-history.json"), "not json", TestContext.Current.CancellationToken);
+        using var http = new RatingsHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(dataset.Compressed)
+        });
+
+        await CreateTask(scope, new RecordingLibrary([Movie("tt0000001", 8f)]), http)
+            .ExecuteAsync(new RecordingProgress(), CancellationToken.None);
+
+        Assert.Equal(1, http.Calls);
+        Assert.Equal("Completed", ReadRun(scope).Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IndexOnlyRunAfterRejectedDownload_DownloadsAgainDespiteFreshCache()
+    {
+        using var scope = new PluginTestScope();
+        scope.Configuration.IncludeMovies = false;
+        scope.Configuration.IncludeSeries = false;
+
+        // The first download decompresses to an empty file. It is cached with a fresh timestamp before the index
+        // build rejects it, and nothing on this path discards it.
+        using var http = new RatingsHttpClientFactory(call => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(call == 1 ? RatingsDataset.Compress([]) : dataset.Compressed)
+        });
+        var task = CreateTask(scope, new RecordingLibrary([]), http);
+
+        await task.ExecuteAsync(new RecordingProgress(), CancellationToken.None);
+        Assert.Equal("Warning", LatestRun(scope).Status);
+        Assert.False(File.Exists(scope.IndexPath));
+
+        await task.ExecuteAsync(new RecordingProgress(), CancellationToken.None);
+
+        Assert.Equal(2, http.Calls);
+        Assert.Equal("Completed", LatestRun(scope).Status);
+        Assert.True(File.Exists(scope.IndexPath));
+    }
+
     [Fact]
     public async Task ExecuteAsync_RepeatedHttpTimeout_IsFailedRatherThanCancelled()
     {
@@ -273,6 +341,9 @@ public class RefreshImdbRatingsTaskExecutionTests(RatingsDataset dataset) : ICla
 
     private static RefreshRun ReadRun(PluginTestScope scope)
         => Assert.Single(new RefreshRunHistory(scope.Temp.Path, NullLogger.Instance).Read());
+
+    private static RefreshRun LatestRun(PluginTestScope scope)
+        => new RefreshRunHistory(scope.Temp.Path, NullLogger.Instance).Read()[0];
 
     private static Movie Movie(string? imdbId, float? rating, Folder? parent = null)
     {

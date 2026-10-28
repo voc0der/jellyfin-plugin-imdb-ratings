@@ -38,7 +38,7 @@ A Jellyfin plugin that downloads the [IMDb ratings flat file](https://datasets.i
 ## Features
 
 - Daily scheduled task (default 3 AM), also triggerable manually from Dashboard
-- Downloads and caches the ~2MB compressed IMDb dataset with 23-hour cache
+- Downloads and caches the ~9MB compressed IMDb dataset with 23-hour cache
 - Batch processing tuned to finish in well under a minute even for massive libraries
 - Configurable minimum votes threshold (default: 1)
 - Choose which library types to update (Movies, TV Series, or both)
